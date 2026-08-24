@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import express from "express";
 import {
   simpleLogs,
@@ -51,15 +52,22 @@ app.post("/checkout", async (req, res) => {
 // much of the response time it accounted for. start() and end() match on
 // `key`, so operations that overlap stay separate timings.
 app.get("/reports/revenue", async (_req, res) => {
-  const key = `revenue-${Date.now()}`;
+  // randomUUID, not Date.now(): start/end are matched through a map on a
+  // process-wide queue, so two requests in the same millisecond would share a
+  // timestamp key and cross each other's pairs.
+  const key = `revenue-${randomUUID()}`;
   await serverLogger.start({ key, touchpoint: "reports/revenue/query" });
 
-  const rows = await new Promise((resolve) =>
-    setTimeout(() => resolve([{ total: 4200 }]), 120),
-  );
-
-  await serverLogger.end({ key, metadata: { rowCount: rows.length } });
-  res.json(rows);
+  try {
+    const rows = await new Promise((resolve) =>
+      setTimeout(() => resolve([{ total: 4200 }]), 120),
+    );
+    res.json(rows);
+  } finally {
+    // In a finally: a query that throws is the one most worth timing, and a
+    // start that never closes records nothing at all.
+    await serverLogger.end({ key });
+  }
 });
 
 // --- 5. Errors ---------------------------------------------------------------
