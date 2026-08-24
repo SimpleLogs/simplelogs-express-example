@@ -1,8 +1,8 @@
 # SimpleLogs + Express
 
 An Express API instrumented with
-[`@simplelogs/express`](https://www.npmjs.com/package/@simplelogs/express). No
-React, no rrweb — just your server.
+[`@simplelogs/express`](https://www.npmjs.com/package/@simplelogs/express).
+Just your server — this repo has no browser half.
 
 The whole integration is **two middleware mounts**. Everything else in this
 repo is the demo around them.
