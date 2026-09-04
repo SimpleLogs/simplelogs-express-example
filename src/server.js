@@ -6,6 +6,7 @@ import {
   flushSimpleLogs,
   serverLogger,
 } from "@simplelogs/express";
+import { initOtel } from "@simplelogs/node";
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,30 @@ app.use(
     ignore: ["/healthz", /^\/static\//],
   }),
 );
+
+// --- 1b. Turn tracing on ----------------------------------------------------
+// The middleware above branches on whether OpenTelemetry has started. Without
+// this call it takes the queue path: requests are still timed and still carry
+// the caller's page and session ids, but there are no spans, so an inbound
+// `traceparent` is read and dropped and the API's work sits in a tree of its
+// own instead of inside the caller's.
+//
+// Nothing reports that. A process that never opted into tracing is not
+// misconfigured, so the fallback is silent by design.
+//
+// After the mount, not before: `simpleLogs()` applies the config it was given,
+// and `initOtel()` resolves its OTLP endpoint from the config as it stands
+// when it runs.
+//
+// From `@simplelogs/node`, which `@simplelogs/express` does not re-export
+// `initOtel` from — hence the direct dependency. It is the same version this
+// package already pulls in; declaring it is what makes it resolve under a
+// non-hoisted `node_modules` layout.
+//
+// `instrumentations: []` because the middleware continues the caller's trace
+// itself. `@opentelemetry/instrumentation-http` would add the same for
+// requests this middleware never sees, and is not worth the dependency here.
+initOtel({ instrumentations: [] });
 
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
