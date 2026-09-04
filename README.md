@@ -85,11 +85,31 @@ masking.
 ## Correlating with a browser
 
 If your frontend uses `@simplelogs/browser`, `@simplelogs/react` or
-`@simplelogs/next`, its patched `fetch` forwards page, session and trace
-headers on same-origin requests. This middleware reads them, so a slow API call
-shows up **inside** the page's trace rather than as an unattached server span.
+`@simplelogs/next`, its patched `fetch` puts the page and session ids on
+same-origin requests. This middleware reads them, so a log written inside a
+route handler is attributed to the browser session that caused it. Neither side
+passes an id explicitly, and nothing has to be turned on.
 
-Neither side passes an id explicitly. It works as soon as both are installed.
+**The trace is a separate opt-in on both sides.** It travels as a W3C
+`traceparent` rather than as one of the SDK's own headers, which means it is
+only sent when the browser has started tracing and only continued when this
+process has:
+
+- the browser calls `initBrowserOtel()` from `@simplelogs/browser/otel` (or
+  `@simplelogs/next/otel`);
+- this API calls `initOtel()`, as [`src/server.js`](src/server.js) does right
+  after the mount.
+
+With both, a slow API call shows up **inside** the page's trace rather than as
+an unattached server span. With either missing, both sides still log, still
+time and still share a page and a session — only the trace splits in two, and
+nothing says so. That silence is deliberate: a process that never opted into
+tracing is not misconfigured.
+
+`initOtel()` comes from `@simplelogs/node`, which this example depends on
+directly. `@simplelogs/express` re-exports `withTrace` but not `initOtel`, and
+a transitive dependency does not reliably resolve under a non-hoisted
+`node_modules` layout.
 
 ## Shutting down
 

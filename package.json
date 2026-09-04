@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@simplelogs/express": "^2.0.0",
+    "@simplelogs/node": "^2.0.0",
     "express": "^5.1.0"
   }
 }
