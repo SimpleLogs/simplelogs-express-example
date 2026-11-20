@@ -7,7 +7,7 @@ before the routes, `simpleLogsErrorHandler()` after them, and `initOtel()` from
 
 ## House style
 
-Each installable SDK package has one standalone example repo: vanilla
+Each app-facing SDK package has one standalone example repo: vanilla
 (`@simplelogs/browser`, port 5173), react (`@simplelogs/react`, 5174), next
 (`@simplelogs/next`, 5175), express (`@simplelogs/express`, 3100) and node
 (`@simplelogs/node`, 3200). The five share one style, so keep it:
@@ -16,14 +16,16 @@ Each installable SDK package has one standalone example repo: vanilla
 - Plain JS: no TypeScript, Tailwind or ESLint.
 - Node's `--env-file-if-exists` loads `.env` (see the `start` and `dev`
   scripts in `package.json`). Don't add `dotenv`.
-- A `.env.example` documents the variables.
+- A `.env.example` documents the SimpleLogs variables.
 - The README covers setup, key handling and the reasoning behind both, and
-  ends with a cross-link table to the other examples.
+  closes with an "Other examples" section holding a cross-link table to the
+  other examples.
 
 ## Dependencies
 
 - Never use a `file:` or absolute-path dependency.
-- Pin `@simplelogs/*` only to versions npm publishes. Check with
+- Point `@simplelogs/*` ranges (currently `^2.1.0`) only at versions npm
+  publishes. Check with
   `npm view @simplelogs/express versions` and
   `npm view @simplelogs/node versions`.
 - `@simplelogs/node` is a direct dependency because `@simplelogs/express`
@@ -43,7 +45,8 @@ The SDK reads `SIMPLELOGS_API_ENDPOINT` from `process.env` itself; the app
 never passes it. It sets the ingest base URL (for example
 `http://localhost:4318/api/v1`) and defaults to the hosted collector. With
 OTel started, the OTLP endpoint is derived from it: a trailing `/api/v1` is
-replaced with `/api/otlp`. Because this is a Node process, the variable does
+replaced with `/api/otlp`, and any other value gets `/api/otlp` appended.
+`SIMPLELOGS_OTLP_ENDPOINT` overrides the derived value. Because this is a Node process, the variable does
 take effect here.
 
 ## Verifying a change
@@ -96,8 +99,9 @@ Stop it, or write each run to a new file.
   `next()` inside that span's context, so the span is already open when the
   route runs. Without OTel, it calls `serverLogger.start()` without awaiting
   it and calls `next()` right away.
-- Paths matched by `ignore` (`/healthz`, `/static/…`) are not timed, but the
-  middleware still sets up the inbound trace context before calling `next()`.
+- Paths matched by `ignore` (`/healthz`, `/static/…`) are not timed and get
+  no request scope, so no page or session correlation. The middleware still
+  sets up the inbound trace context before calling `next()`.
 
 ## Docs style
 
